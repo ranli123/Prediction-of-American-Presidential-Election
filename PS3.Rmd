@@ -1,0 +1,94 @@
+---
+title: "STA304 PS3"
+author: "Ran Li"
+date: "29/10/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library("tidyverse")
+library("lme4")
+```
+
+```{r}
+survey <- read_csv("/Users/ranli/Desktop/STA304 PS3/vote.csv")
+survey_reduced = survey %>% drop_na()
+## Add age group
+age_group <- ifelse(
+  survey_reduced$age<=29 , "18-29",
+  ifelse(
+    survey_reduced<=44, "30-44",
+    ifelse(
+      survey_reduced<=64, "45-64",
+      ifelse(
+        survey_reduced>=65, "65+", NA
+      )
+    )
+  )
+)
+
+survey_reduced = cbind(survey_reduced, age_group)
+
+## Remove some data
+#levels(factor(survey_reduced$vote_2020))
+survey_reduced = survey_reduced[!survey_reduced$vote_2020=="I am not sure/don't know"|survey_reduced$vote_2020=="I would not vote"|survey_reduced$vote_2020=="Someone else",]
+
+
+#levels(factor(survey_reduced$employment))
+#levels(factor(survey_reduced$race_ethnicity))
+
+## Relevel race group
+race_group = ifelse(survey_reduced$race_ethnicity == "White",
+                    "White",
+                    ifelse(survey_reduced$race_ethnicity == "Black, or African American", "Black, or African American",
+                           ifelse(survey_reduced$race_ethnicity =="Asian (Chinese)", "Asian (Chinese)",
+                                  ifelse(survey_reduced$race_ethnicity =="Asian (Japanese)", "Asian (Japanese)",
+                                         ifelse(survey_reduced$race_ethnicity =="Asian (Asian Indian)"|survey_reduced$race_ethnicity =="Asian (Filipino)"|survey_reduced$race_ethnicity =="Asian (Korean)"|survey_reduced$race_ethnicity =="Asian (Other)"|survey_reduced$race_ethnicity =="Asian (Vietnamese)"|survey_reduced$race_ethnicity =="Asian (Other)"|survey_reduced$race_ethnicity =="Pacific Islander (Guamanian)"|survey_reduced$race_ethnicity =="Pacific Islander (Native Hawaiian)"|survey_reduced$race_ethnicity =="Pacific Islander (Other)"|survey_reduced$race_ethnicity =="Pacific Islander (Samoan)", "other asian or pacific islander",
+                                                ifelse(survey_reduced$race_ethnicity =="American Indian or Alaska Native", "American Indian or Alaska Native",
+                                                       ifelse(survey_reduced$race_ethnicity =="Some other race", "Some other race", NA
+                                                          )))))))
+survey_reduced = cbind(survey_reduced, race_group)
+##survey_reduced$race_group
+
+
+
+## Relevel Employment
+employment_group = ifelse(survey_reduced$employment=="Full-time employed"|survey_reduced$employment=="Part-time employed"|
+survey_reduced$employment=="Self-employed"|survey_reduced$employment=="Homemaker",
+"employed",
+ifelse(survey_reduced$employment=="Unemployed or temporarily on layoff",
+       "unemployeed",
+       ifelse(survey_reduced$employment=="Permanently disabled"|
+                survey_reduced$employment=="Student"|
+                survey_reduced$employment=="Retired", "not in labor force", "n/a")))
+
+survey_reduced = cbind(survey_reduced, employment_group)
+
+
+## Build logistic regression model
+model = glmer(vote_trump ~ factor(gender)+(1|age_group)+ (1|state)+(1|education)+(1|race_group)+(1|employment_group),data = survey_reduced, family = binomial)
+
+## levels(factor(survey_reduced$employment))
+```
+```{r}
+library("datasets")
+census = read.csv("census_data.csv")
+# head(census)
+names(census)[2] <- "gender"
+names(census)[3] <- "state"
+names(census)[4] <- "education"
+names(census)[6] <- "employment_group"
+
+#ratio = census$n/sum(census$n)
+#census = cbind(census, ratio)
+census$gender = str_to_title(census$gender)
+#levels(factor(census$gender))
+prediction <- model %>% predict(census, allow.new.levels = TRUE, type = "response")
+census = cbind(census, prediction)
+y_s = sum(census$prediction*census$n)/sum(census$n)
+y_s
+```
+
