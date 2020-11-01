@@ -1,0 +1,56 @@
+---
+title: "STA304 PS3"
+author: "Ran Li"
+date: "29/10/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library("tidyverse")
+library("lme4")
+```
+
+```{r}
+survey <- read_csv("/Users/ranli/Desktop/STA304 PS3/vote.csv")
+survey_reduced = survey %>% drop_na()
+## Add age group
+age_group <- ifelse(
+  survey_reduced$age<=29 , "18-29",
+  ifelse(
+    survey_reduced<=44, "30-44",
+    ifelse(
+      survey_reduced<=64, "45-64",
+      ifelse(
+        survey_reduced>=65, "65+", NA
+      )
+    )
+  )
+)
+
+survey_reduced = cbind(survey_reduced, age_group)
+
+## Remove some data
+#levels(factor(survey_reduced$vote_2020))
+survey_reduced = survey_reduced[!survey_reduced$vote_2020=="I am not sure/don't know"|survey_reduced$vote_2020=="I would not vote"|survey_reduced$vote_2020=="Someone else",]
+
+## Build logistic regression model
+model = glmer(vote_trump ~ factor(gender)+(1|age_group)+ (1|state)+(1|education)+(1|race_ethnicity)+(1|employment),data = survey_reduced, family = binomial)
+
+levels(factor(survey_reduced$employment))
+levels(factor(survey_reduced$race_ethnicity))
+
+## Relevel race group
+race_group = ifelse(survey_reduced$race_ethnicity == "White",
+                    "White",
+                    ifelse(survey_reduced$race_ethnicity == "Black, or African American", "Black, or African American",
+                           ifelse(survey_reduced$race_ethnicity =="Asian (Chinese)", "Asian (Chinese)",
+                                  ifelse(survey_reduced$race_ethnicity =="Asian (Japanese)", "Asian (Japanese)",
+                                         ifelse(survey_reduced$race_ethnicity =="Asian (Asian Indian)"|survey_reduced$race_ethnicity =="Asian (Filipino)"|survey_reduced$race_ethnicity =="Asian (Korean)"|survey_reduced$race_ethnicity =="Asian (Other)"|survey_reduced$race_ethnicity =="Asian (Vietnamese)"|survey_reduced$race_ethnicity =="Asian (Other)"|survey_reduced$race_ethnicity =="Pacific Islander (Guamanian)"|survey_reduced$race_ethnicity =="Pacific Islander (Native Hawaiian)"|survey_reduced$race_ethnicity =="Pacific Islander (Other)"|survey_reduced$race_ethnicity =="Pacific Islander (Samoan)", "other asian or pacific islander",
+                                                ifelse(survey_reduced$race_ethnicity =="American Indian or Alaska Native", "American Indian or Alaska Native",
+                                                       ifelse(survey_reduced$race_ethnicity =="Some other race", "Some other race", NA
+                                                          )))))))
+```
+
